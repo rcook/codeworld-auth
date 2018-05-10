@@ -1,0 +1,4 @@
+resolver: lts-10.4
+extra-deps:
+- git: git@github.com:rcook/codeworld-account.git
+  commit: bfa6806a053abbf11daf34d00b5b95ccd0e333cd
