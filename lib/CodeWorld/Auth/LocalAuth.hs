@@ -31,7 +31,6 @@ import           Control.Monad.Trans.Class (lift)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as Char8 (pack, unpack)
 import           Data.List.Split (splitOn)
-import           Data.Maybe (isJust)
 import           Data.Text (Text)
 import qualified Data.Text as Text (strip, pack, unpack)
 import qualified Data.Text.IO as Text (readFile)
@@ -182,20 +181,20 @@ signInHandler authConfig = do
         Just newPassword -> signInWithNewPassword authConfig userId password newPassword
 
 signIn :: AuthConfig -> UserId -> Password -> Snap ()
-signIn authConfig userId password
-    | password == Password "expired" = unauthorized401Json $ m [ ("reason", "password-expired") ]
-    | otherwise = do
-                    isValid <- liftIO $ checkPassword authConfig userId password
-                    case isValid of
-                        False -> finishWith forbidden403
-                        True -> addAuthHeader authConfig userId
+signIn authConfig@(AuthConfig _ store) userId password = do
+    mbStatus <- liftIO $ verifyAccount store userId password
+    case mbStatus of
+        Nothing -> finishWith forbidden403
+        Just Active -> addAuthHeader authConfig userId
+        Just Expired -> unauthorized401Json $ m [ ("reason", "password-expired") ]
 
 signInWithNewPassword :: AuthConfig -> UserId -> Password -> Password -> Snap ()
-signInWithNewPassword authConfig userId password _ = do
-    isValid <- liftIO $ checkPassword authConfig userId password
-    case isValid of
-        False -> finishWith forbidden403
-        True -> addAuthHeader authConfig userId
-
-checkPassword :: AuthConfig -> UserId -> Password -> IO Bool
-checkPassword (AuthConfig _ store) userId password = isJust <$> verifyAccount store userId password
+signInWithNewPassword authConfig@(AuthConfig _ store) userId password _ = do
+    mbStatus <- liftIO $ verifyAccount store userId password
+    case mbStatus of
+        Nothing -> finishWith forbidden403
+        Just _ -> do
+            liftIO $ do
+                passwordHash <- hash password
+                updateAccount store userId (Just Active) (Just passwordHash)
+            addAuthHeader authConfig userId
