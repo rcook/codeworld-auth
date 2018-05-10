@@ -15,6 +15,7 @@ module CodeWorld.Auth.GoogleAuth
     ( AuthConfig
     , authRoutes
     , authenticated
+    , configureAuth
     , optionallyAuthenticated
     ) where
 
@@ -24,8 +25,13 @@ import           Snap.Core (Snap)
 
 data AuthConfig
 
+configureAuth :: FilePath -> IO (Maybe AuthConfig)
+configureAuth _ = do
+    putStrLn "Google authentication not implemented!"
+    pure Nothing
+
 authRoutes :: AuthConfig -> [Route]
-authRoutes _ = []
+authRoutes _ = undefined
 
 authenticated :: (UserId -> Snap ()) -> AuthConfig -> Snap ()
 authenticated = undefined

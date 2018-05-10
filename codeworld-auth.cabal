@@ -28,6 +28,8 @@ library
                                           , base >= 4.7 && < 5
                                           , bytestring
                                           , codeworld-account
+                                          , directory
+                                          , filepath
                                           , jwt
                                           , snap-core
                                           , split

@@ -17,6 +17,7 @@ module CodeWorld.Auth.LocalAuth
     ( AuthConfig
     , authRoutes
     , authenticated
+    , configureAuth
     , optionallyAuthenticated
     ) where
 
@@ -32,7 +33,8 @@ import qualified Data.ByteString.Char8 as Char8 (pack, unpack)
 import           Data.List.Split (splitOn)
 import           Data.Maybe (isJust)
 import           Data.Text (Text)
-import qualified Data.Text as Text (pack, unpack)
+import qualified Data.Text as Text (strip, pack, unpack)
+import qualified Data.Text.IO as Text (readFile)
 import           Data.Time.Clock
                     ( NominalDiffTime
                     , UTCTime
@@ -52,6 +54,8 @@ import           Snap.Core
                     , pass
                     , setHeader
                     )
+import           System.Directory (doesFileExist)
+import           System.FilePath ((</>))
 import           Web.JWT
                     ( Algorithm(..)
                     , JSON
@@ -61,6 +65,7 @@ import           Web.JWT
                     , decodeAndVerifySignature
                     , def
                     , encodeSigned
+                    , secret
                     , stringOrURI
                     , stringOrURIToText
                     )
@@ -72,6 +77,26 @@ jwtIssuer = "https://code.world/"
 
 jwtExpiryDuration :: NominalDiffTime
 jwtExpiryDuration = fromInteger 5
+
+configureAuth :: FilePath -> IO (Maybe AuthConfig)
+configureAuth appDir = do
+    let secretPath = appDir </> "local-auth-secret.txt"
+        storePath = appDir </> "local-auth.db"
+    secretPathExists <- doesFileExist secretPath
+    case secretPathExists of
+        False -> do
+            putStrLn $ "Secret key file not found at " ++ secretPath ++ ": skipping configuration of local authentication"
+            pure Nothing
+        True -> do
+            secretContent <- Text.readFile secretPath
+            let secret_ = secret $ Text.strip secretContent
+                store = Store storePath
+            storeExists_ <- storeExists store
+            case storeExists_ of
+                False -> do
+                    putStrLn $ "Account store database file not found at " ++ storePath ++ ": skipping configuration of local authentication"
+                    pure Nothing
+                True -> pure $ Just (AuthConfig secret_ store)
 
 authRoutes :: AuthConfig -> [(ByteString, Snap ())]
 authRoutes authConfig =

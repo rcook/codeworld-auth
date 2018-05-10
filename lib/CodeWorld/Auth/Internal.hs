@@ -32,8 +32,16 @@ data AuthConfig =
     | Local LocalAuth.AuthConfig
     | None
 
-getAuthConfig :: IO AuthConfig
-getAuthConfig = pure None
+getAuthConfig :: FilePath -> IO AuthConfig
+getAuthConfig appDir = do
+    mbLocalAuthConfig <- LocalAuth.configureAuth appDir
+    case mbLocalAuthConfig of
+        Just localAuthConfig -> pure $ Local localAuthConfig
+        Nothing -> do
+            mbGoogleAuthConfig <- GoogleAuth.configureAuth appDir
+            case mbGoogleAuthConfig of
+                Just googleAuthConfig -> pure $ Google googleAuthConfig
+                Nothing -> pure None
 
 authMethod :: AuthConfig -> String
 authMethod (Google _) = "Google"
