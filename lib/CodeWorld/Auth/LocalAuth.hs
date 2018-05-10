@@ -189,12 +189,12 @@ signIn authConfig@(AuthConfig _ store) userId password = do
         Just Expired -> unauthorized401Json $ m [ ("reason", "password-expired") ]
 
 signInWithNewPassword :: AuthConfig -> UserId -> Password -> Password -> Snap ()
-signInWithNewPassword authConfig@(AuthConfig _ store) userId password _ = do
+signInWithNewPassword authConfig@(AuthConfig _ store) userId password newPassword = do
     mbStatus <- liftIO $ verifyAccount store userId password
     case mbStatus of
         Nothing -> finishWith forbidden403
         Just _ -> do
             liftIO $ do
-                passwordHash <- hash password
+                passwordHash <- hash newPassword
                 updateAccount store userId (Just Active) (Just passwordHash)
             addAuthHeader authConfig userId
