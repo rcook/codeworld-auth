@@ -22,6 +22,15 @@ module CodeWorld.Auth.LocalAuth
     ) where
 
 import           CodeWorld.Account
+                    ( Password(..)
+                    , Status(..)
+                    , Store(..)
+                    , UserId(..)
+                    , hash
+                    , storeExists
+                    , updateAccount
+                    , verifyAccount
+                    )
 import           CodeWorld.Auth.Http
 import           CodeWorld.Auth.Time
 import           CodeWorld.Auth.Util
