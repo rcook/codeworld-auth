@@ -30,6 +30,7 @@ library
                                           , codeworld-account
                                           , directory
                                           , filepath
+                                          , http-conduit
                                           , jwt
                                           , snap-core
                                           , split
