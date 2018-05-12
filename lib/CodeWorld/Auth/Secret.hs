@@ -12,9 +12,8 @@
 -}
 
 module CodeWorld.Auth.Secret
-    ( Secret_
+    ( Secret(..)
     , generateSecret
-    , jwtSecret
     , readSecret
     , writeSecret
     ) where
@@ -23,22 +22,18 @@ import           Crypto.Random (getRandomBytes)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as ByteString (readFile, writeFile)
 import           Data.ByteString.Base64 as Base64 (decode, encode)
-import           Web.JWT (Secret, binarySecret)
 
-data Secret_ = Secret_ ByteString deriving Eq
+data Secret = Secret ByteString deriving Eq
 
-generateSecret :: IO Secret_
-generateSecret = Secret_ <$> getRandomBytes 32
+generateSecret :: IO Secret
+generateSecret = Secret <$> getRandomBytes 32
 
-writeSecret :: FilePath -> Secret_ -> IO ()
-writeSecret path (Secret_ bytes) = ByteString.writeFile path (Base64.encode bytes)
+writeSecret :: FilePath -> Secret -> IO ()
+writeSecret path (Secret bytes) = ByteString.writeFile path (Base64.encode bytes)
 
-readSecret :: FilePath -> IO Secret_
+readSecret :: FilePath -> IO Secret
 readSecret path = do
     s <- ByteString.readFile path
     case Base64.decode s of
         Left e -> error e
-        Right bytes -> return $ Secret_ bytes
-
-jwtSecret :: Secret_ -> Secret
-jwtSecret (Secret_ bytes) = binarySecret bytes
+        Right bytes -> return $ Secret bytes

@@ -65,25 +65,26 @@ import           Snap.Core
 import           System.Directory (doesFileExist)
 import           System.FilePath ((</>))
 import           Web.JWT
-                    ( Algorithm(..)
-                    , JSON
+                    ( JSON
                     , JWTClaimsSet(..)
-                    , Secret
+                    , Signer(..)
                     , claims
                     , decodeAndVerifySignature
-                    , def
                     , encodeSigned
                     , stringOrURI
                     , stringOrURIToText
                     )
 
-data AuthConfig = AuthConfig Secret Store
+data AuthConfig = AuthConfig Signer Store
 
 jwtIssuer :: Text
 jwtIssuer = "https://code.world/"
 
 jwtExpiryDuration :: NominalDiffTime
 jwtExpiryDuration = fromInteger 5
+
+jwtSigner :: Secret -> Signer
+jwtSigner (Secret bytes) = HMACSecret bytes
 
 configureAuth :: FilePath -> IO (Maybe AuthConfig)
 configureAuth appDir = do
@@ -95,14 +96,14 @@ configureAuth appDir = do
             putStrLn $ "Secret key file not found at " ++ secretPath ++ ": skipping configuration of local authentication"
             pure Nothing
         True -> do
-            secret_ <- jwtSecret <$> readSecret secretPath
+            signer <- jwtSigner <$> readSecret secretPath
             let store = Store storePath
             storeExists_ <- storeExists store
             case storeExists_ of
                 False -> do
                     putStrLn $ "Account store database file not found at " ++ storePath ++ ": skipping configuration of local authentication"
                     pure Nothing
-                True -> pure $ Just (AuthConfig secret_ store)
+                True -> pure $ Just (AuthConfig signer store)
 
 authRoutes :: AuthConfig -> [(ByteString, Snap ())]
 authRoutes authConfig =
@@ -124,10 +125,10 @@ optionallyAuthenticated handler authConfig = do
         Just authHeaderBS -> authenticatedHelper authConfig (\userId -> handler $ Just userId) authHeaderBS
 
 authenticatedHelper :: AuthConfig -> (UserId -> Snap ()) -> ByteString -> Snap ()
-authenticatedHelper authConfig@(AuthConfig secret_ _) handler authHeaderBS = withSnapExcept $ do
+authenticatedHelper authConfig@(AuthConfig signer _) handler authHeaderBS = withSnapExcept $ do
     (issuer, expiresAt, userId) <- hoistMaybe (finishWith forbidden403) $ do
         t <- parseAuthHeader authHeaderBS
-        jwt <- decodeAndVerifySignature secret_ t
+        jwt <- decodeAndVerifySignature signer t
         let c = claims jwt
         issuer' <- iss c
         expiresAt' <- exp c
@@ -159,24 +160,24 @@ parseAuthHeader bs =
         _ -> Nothing
 
 addAuthHeader :: AuthConfig -> UserId -> Snap ()
-addAuthHeader (AuthConfig secret_ _) userId = do
+addAuthHeader (AuthConfig signer _) userId = do
     issuedAt <- liftIO getCurrentTime
-    case jwtToken secret_ userId issuedAt jwtExpiryDuration of
+    case jwtToken signer userId issuedAt jwtExpiryDuration of
         Nothing -> pass
         Just t -> modifyResponse $ setHeader "Authorization" (authHeader t)
 
-jwtToken :: Secret -> UserId -> UTCTime -> NominalDiffTime -> Maybe JSON
-jwtToken secret_ (UserId userIdStr) issuedAt expiryDuration = do
+jwtToken :: Signer -> UserId -> UTCTime -> NominalDiffTime -> Maybe JSON
+jwtToken signer (UserId userIdStr) issuedAt expiryDuration = do
     let expiresAt = addUTCTime expiryDuration issuedAt
     issuedAtNum <- utcTimeToNumericDate issuedAt
     expiresAtNum <- utcTimeToNumericDate expiresAt
-    let claimsSet = def
+    let claimsSet = mempty
             { iss = stringOrURI jwtIssuer
             , sub = stringOrURI (Text.pack userIdStr)
             , exp = Just expiresAtNum
             , iat = Just issuedAtNum
             }
-    return $ encodeSigned HS256 secret_ claimsSet
+    return $ encodeSigned signer claimsSet
 
 signInHandler :: AuthConfig -> Snap ()
 signInHandler authConfig = do

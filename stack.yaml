@@ -2,3 +2,4 @@ resolver: lts-10.4
 extra-deps:
 - git: git@github.com:rcook/codeworld-account.git
   commit: 18d87fd0e2bcf3abbacafc4936887e74579f8a8f
+- jwt-0.8.0
