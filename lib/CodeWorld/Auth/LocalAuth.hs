@@ -32,6 +32,7 @@ import           CodeWorld.Account
                     , verifyAccount
                     )
 import           CodeWorld.Auth.Http
+import           CodeWorld.Auth.Secret
 import           CodeWorld.Auth.Time
 import           CodeWorld.Auth.Util
 import           Control.Monad (when)
@@ -41,8 +42,7 @@ import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as Char8 (pack, unpack)
 import           Data.List.Split (splitOn)
 import           Data.Text (Text)
-import qualified Data.Text as Text (strip, pack, unpack)
-import qualified Data.Text.IO as Text (readFile)
+import qualified Data.Text as Text (pack, unpack)
 import           Data.Time.Clock
                     ( NominalDiffTime
                     , UTCTime
@@ -73,7 +73,6 @@ import           Web.JWT
                     , decodeAndVerifySignature
                     , def
                     , encodeSigned
-                    , secret
                     , stringOrURI
                     , stringOrURIToText
                     )
@@ -96,9 +95,8 @@ configureAuth appDir = do
             putStrLn $ "Secret key file not found at " ++ secretPath ++ ": skipping configuration of local authentication"
             pure Nothing
         True -> do
-            secretContent <- Text.readFile secretPath
-            let secret_ = secret $ Text.strip secretContent
-                store = Store storePath
+            secret_ <- jwtSecret <$> readSecret secretPath
+            let store = Store storePath
             storeExists_ <- storeExists store
             case storeExists_ of
                 False -> do
