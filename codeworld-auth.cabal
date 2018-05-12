@@ -26,8 +26,10 @@ library
                                             -fwarn-unused-imports
   build-depends:                            aeson
                                           , base >= 4.7 && < 5
+                                          , base64-bytestring
                                           , bytestring
                                           , codeworld-account
+                                          , cryptonite
                                           , directory
                                           , filepath
                                           , http-conduit
@@ -43,6 +45,7 @@ library
                                           , CodeWorld.Auth.Http
                                           , CodeWorld.Auth.Internal
                                           , CodeWorld.Auth.LocalAuth
+                                          , CodeWorld.Auth.Secret
                                           , CodeWorld.Auth.Time
                                           , CodeWorld.Auth.Types
                                           , CodeWorld.Auth.Util
@@ -60,6 +63,5 @@ executable codeworld-auth
                                             -Werror=missing-methods
                                             -fwarn-unused-imports
   build-depends:                            base >= 4.7 && < 5
-                                          , base64-bytestring
-                                          , cryptonite
+                                          , codeworld-auth
                                           , optparse-applicative

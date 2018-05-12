@@ -13,9 +13,7 @@
 
 module Main (main) where
 
-import qualified Data.ByteString as ByteString (writeFile)
-import           Data.ByteString.Base64 as Base64 (encode)
-import           Crypto.Random (getRandomBytes)
+import           CodeWorld.Auth.Secret
 import           Data.Monoid ((<>))
 import           Options.Applicative
                     ( Parser
@@ -58,6 +56,5 @@ main = parse >>= go
 
 doGenerateSecret :: FilePath -> IO ()
 doGenerateSecret path = do
-    bytes <- getRandomBytes 32
-    let bs = Base64.encode bytes
-    ByteString.writeFile path bs
+    secret_ <- generateSecret
+    writeSecret path secret_
